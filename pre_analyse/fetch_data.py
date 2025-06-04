@@ -6,6 +6,14 @@ from bs4 import BeautifulSoup
 import csv
 import time
 
+# Configure logging at the module level
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 
 def scrape_ncss_data(max_pages: int = 5, output_csv_file: str = 'ncss_data.csv') -> None:
     """
@@ -15,13 +23,6 @@ def scrape_ncss_data(max_pages: int = 5, output_csv_file: str = 'ncss_data.csv')
         max_pages (int): The maximum number of pages to scrape.
         output_csv_file (str): The name of the CSV file to save data to.
     """
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    logger = logging.getLogger(__name__)
-
     base_url: str = "https://cy.ncss.cn/mtcontest/mingtilist"
     domain_url: str = "https://cy.ncss.cn"  # For constructing absolute URLs from relative paths
 
@@ -50,16 +51,16 @@ def scrape_ncss_data(max_pages: int = 5, output_csv_file: str = 'ncss_data.csv')
 
     for page_index in tqdm(range(1, max_pages + 1), desc="Scraping pages", unit="page"):
         # logger.info(f"Scraping page {page_index} of {max_pages}...") # Removed for tqdm
-        params = {
-            'pageIndex': page_index,
-            'pageSize': 30,  # As per your cURL command
+        try:
+            params = {
+                'pageIndex': page_index,
+                'pageSize': 30,  # As per your cURL command
             'companyName': '',
             'name': '',
             'zbdm': '',
             'lbdm': ''
         }
 
-        try:
             response: requests.Response = requests.get(base_url, headers=headers, cookies=cookies, params=params, timeout=20)
             response.raise_for_status()  # Will raise an HTTPError for bad responses (4xx or 5xx)
 
@@ -122,7 +123,7 @@ def scrape_ncss_data(max_pages: int = 5, output_csv_file: str = 'ncss_data.csv')
             logger.error(f"Error fetching page {page_index}: {e}")
             break  # Stop on other request errors
         except Exception as e:
-            logger.error(f"An unexpected error occurred while processing page {page_index}: {e}")
+            logger.exception(f"An unexpected error occurred while processing page {page_index}:")
             continue  # Skip to next page or break, depending on desired robustness
 
     if not all_items_data:
